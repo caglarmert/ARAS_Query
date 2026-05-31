@@ -2,6 +2,7 @@ import os
 import random
 import pandas as pd
 from flask import Flask, render_template, request, jsonify, send_file
+import gspread
 
 app = Flask(__name__)
 
@@ -56,16 +57,45 @@ def serve_image(domain, type, filename):
 @app.route('/api/submit', methods=['POST'])
 def submit():
     results = request.json
-    results_df = pd.json_normalize(results)
     
-    output_file = 'evaluation_results.csv'
-    # Append to CSV if it exists, otherwise create new
-    if os.path.exists(output_file):
-        results_df.to_csv(output_file, mode='a', header=False, index=False)
-    else:
-        results_df.to_csv(output_file, index=False)
+    # 1. Locate the credentials file (Render will inject this path)
+    # Defaults to local 'google_credentials.json' for your local testing
+    cred_path = os.environ.get('GOOGLE_CREDENTIALS_PATH', 'google_credentials.json')
+    
+    try:
+        # 2. Authenticate with Google
+        gc = gspread.service_account(filename=cred_path)
         
-    return jsonify({"status": "success"})
+        # 3. Open the sheet using the ID from your environment variables
+        sheet_id = os.environ.get('SPREADSHEET_ID')
+        sh = gc.open_by_key(sheet_id)
+        worksheet = sh.sheet1
+        
+        # 4. Format data as a list of lists for gspread
+        rows_to_insert = []
+        for res in results:
+            row = [
+                res.get('filename', ''),
+                res.get('actual_domain', ''),
+                res.get('predicted_origin', ''),
+                res.get('realism_score', ''),
+                res.get('mask_alignment_score', ''),
+                res.get('score_hybrid_gemma3-4b', ''),
+                res.get('score_hybrid_qwen3-vl-8b', ''),
+                res.get('score_text_qwen3-4b', ''),
+                res.get('score_vision_gemma3-4b', ''),
+                res.get('score_vision_qwen3-vl-8b', '')
+            ]
+            rows_to_insert.append(row)
+            
+        # 5. Append to Google Sheets
+        worksheet.append_rows(rows_to_insert)
+        
+        return jsonify({"status": "success"})
+        
+    except Exception as e:
+        print(f"Error saving to Google Sheets: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
