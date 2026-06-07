@@ -362,10 +362,9 @@ def _insert_attention(trials, render_as, rng):
         trials.insert(pos, {
             "trial_id": f"attn_{render_as}_{pos}", "type": "attention",
             "render_as": render_as, "target": target,
-            "prompt": f"Attention check — please select option {target}.",
+            "prompt": f"Attention check - please select option {target}. (Dikkat - Lütfen {target} seçeneğini işaretleyin.)",
             "gt": {"expected": target, "is_control": True, "control_kind": "attention"},
         })
-
 
 # ----------------------------------------------------------------------------------
 # PLAN CLEANUP

@@ -33,16 +33,16 @@
     padding:12px 0;
   }
   .bar-inner{max-width:1000px; margin:0 auto; padding:0 24px;
-    display:flex; align-items:center; justify-content:space-between; gap:24px;}
-  .brand{font-weight:700; letter-spacing:.14em; font-size:13px; text-transform:uppercase; color:var(--accent-ink);}
-  .brand span{color:var(--faint); font-weight:600; letter-spacing:.04em; text-transform:none; margin-left:10px;}
-  .stages{display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;}
-  @media(max-width:760px){
+    display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .brand{font-weight:700; letter-spacing:.14em; font-size:13px; text-transform:uppercase; color:var(--accent-ink); flex:0 0 auto; white-space:nowrap;}
+  .brand span{color:var(--faint); font-weight:600; letter-spacing:.04em; text-transform:none; margin-left:10px; white-space:nowrap;}
+  .stages{display:flex; gap:4px; align-items:center; flex-wrap:nowrap; flex:1 1 auto; justify-content:center; min-width:0; overflow:hidden;}
+  @media(max-width:960px){
     .brand span{display:none;}
-    .stagepill{padding:5px 8px; font-size:11.5px;}
+    .stagepill{padding:3px 7px; font-size:11px;}
   }
-  .stagepill{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--faint);
-    padding:5px 11px; border-radius:999px; border:1px solid transparent;}
+  .stagepill{display:flex; align-items:center; gap:5px; font-size:12px; color:var(--faint);
+    padding:4px 9px; border-radius:999px; border:1px solid transparent;}
   .stagepill .dot{width:8px; height:8px; border-radius:50%; background:var(--border-strong);}
   .stagepill.active{color:var(--accent-ink); background:var(--accent-soft); border-color:#d7e0ea; font-weight:600;}
   .stagepill.active .dot{background:var(--accent);}
@@ -190,14 +190,26 @@
     pointer-events:none;
   }
   .frame.img-loaded::after{display:none;}
+  /* ---- language switcher ---- */
+  .lang-switch{display:flex;gap:3px;align-items:center;flex:none;}
+  .lang-btn{font:inherit;font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:999px;
+    border:1px solid transparent;cursor:pointer;background:transparent;color:var(--faint);
+    transition:border-color .12s,color .12s,background .12s;white-space:nowrap;line-height:1;}
+  .lang-btn:hover{border-color:var(--border-strong);color:var(--ink);}
+  .lang-btn.active{background:var(--accent-soft);border-color:#d7e0ea;color:var(--accent-ink);}
+  @media(max-width:520px){.lang-btn{font-size:11px;padding:4px 7px;}}
 </style>
 </head>
 <body>
 
 <header class="bar">
   <div class="bar-inner">
-    <div class="brand">ADEM<span>Synthetic Imagery Perception Study</span></div>
+    <div class="brand">ADEM<span id="brandSubtitle">Synthetic Imagery Perception Study</span></div>
     <div class="stages" id="stagepills"></div>
+    <div class="lang-switch" id="langSwitch">
+      <button class="lang-btn active" data-lang="en" onclick="setLang('en')">🌐 Default</button>
+      <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">🇹🇷 Türkçe</button>
+    </div>
   </div>
 </header>
 
@@ -208,27 +220,180 @@
 
 <script>
 // ============================================================================
+//  i18n — all UI strings, English and Turkish
+// ============================================================================
+const i18n = {
+  en: {
+    studyTitle:"Synthetic Imagery Perception Study",
+    s1label:"Transforms",s2label:"Mask check",s3label:"Generators",s4label:"Realism",
+    s1title:"Same scene or not?",s2title:"Mask correctness",
+    s3title:"Best generated image",s4title:"How realistic?",
+    consentEyebrow:"Informed consent",
+    consentH:"Perception study on synthetic remote-sensing imagery",
+    consentLead:"You will view aerial / satellite images and segmentation masks and answer short perceptual questions across four brief stages. The study takes roughly 6 minutes.",
+    consentCollectH:"What we collect.",
+    consentCollectBody:"Only your answers, the time taken per question, an anonymous session ID, and your self-reported remote-sensing experience. We do <strong>not</strong> collect your name, email, IP address, or any identifying information.",
+    consentB1:"Participation is voluntary; you may stop at any time by closing the tab.",
+    consentB2:"Responses are anonymous and used only for aggregate academic research.",
+    consentB3:"There are no right or wrong answers — we are interested in your honest perception.",
+    consentSmall:"By continuing you confirm you are 18+ and consent to participation under these terms.",
+    consentSession:"Session",consentBtn:"I consent — continue",
+    demoEyebrow:"Before we start",
+    demoH:"Your experience with remote-sensing imagery",
+    demoHelp:"This single question helps us account for expertise in the analysis. Pick the closest.",
+    exp0title:"No experience",exp0sub:"I rarely look at aerial or satellite imagery.",
+    exp1title:"Some familiarity",exp1sub:"I occasionally work with maps or remote-sensing imagery.",
+    exp2title:"Domain expert",exp2sub:"I work professionally with remote sensing / GIS / earth observation.",
+    btnBack:"Back",btnContinue:"Continue",btnNext:"Next",btnBegin:"Begin stage",
+    stagesInfo:"4 stages · ~6 minutes total",
+    congratsMsg:(n)=>`Stage ${n} complete — well done.`,
+    s1ey:"Stage 1 of 4 · Transforms",s1h:"Same scene, or different?",
+    s1body:"You'll see two images side by side. The right image may be altered — rotated, flipped, cropped, noisy, or warped. Ignore those alterations and judge only whether <strong>both images show the same underlying scene</strong>.",
+    s1pts:["Look past the distortion — focus on the content / layout of the scene.","Some pairs really are different scenes. Say <em>Different</em> when they are.","There are no trick gradients — just your honest read."],
+    s2ey:"Stage 2 of 4 · Mask check",s2h:"Does the mask match the image?",
+    s2body:"Each screen shows an image and a colour-coded segmentation mask. Using the legend, decide whether the mask <strong>correctly describes that image</strong>. Some masks belong to a different image.",
+    s2pts:["The legend (always on the right) maps each colour to a land-cover class.","Check that major regions line up — water, built-up, vegetation.","Answer <em>No</em> if the mask clearly belongs to another scene."],
+    s3ey:"Stage 3 of 4 · Generators",s3h:"Which generated image is best?",
+    s3body:"You'll see one segmentation mask and three images generated from it by different models. Pick the <strong>single image that best fits the mask and looks most realistic</strong>.",
+    s3pts:["The three are shown in random order each time.","Weigh both faithfulness to the mask <em>and</em> realism.","Choose the one you'd most believe is a real aerial photo of that layout."],
+    s4ey:"Stage 4 of 4 · Realism",s4h:"How realistic is each image?",
+    s4body:"You'll rate single images on a 1–5 scale, from <strong>completely synthetic</strong> to <strong>completely real</strong>. Go with your first impression.",
+    s4pts:["1 = you're confident it's computer-generated.","5 = you're confident it's a genuine photograph.","Use the middle values when you're unsure."],
+    s1q:"Do these two images show the <span class=\"em\">same scene</span>?",
+    imgA:"Image A · original",imgB:"Image B · possibly altered",
+    sameScene:"Same scene",theyMatch:"they match",
+    different:"Different",notSame:"not the same",
+    s2q:"Does this mask <span class=\"em\">correctly segment</span> the image?",
+    imgLabel:"Image",maskLabel:"Segmentation mask",
+    yesMatch:"Yes — it matches",noWrong:"No — it's wrong",
+    s3q:"Which generated image <span class=\"em\">best matches the mask and looks most realistic</span>?",
+    realRef:"Real reference",condMask:"Conditioning mask",
+    option:(n)=>`Option ${n}`,
+    realLabels:["Completely<br>synthetic","Probably<br>synthetic","Unsure","Probably<br>real","Completely<br>real"],
+    s4q:"How <span class=\"em\">realistic</span> is this image?",
+    likertLow:"← computer-generated",likertHigh:"genuine photograph →",
+    attnBody:"Please confirm you're paying attention.",
+    legendTitle:"Class legend",legendTitleH:"Classes",
+    submittingEy:"Submitting…",submittingH:"Saving your responses",submittingBody:"One moment.",
+    outroEy:"Complete",outroH:"Thank you for taking part",
+    outroBody:(n,ok)=>`Your ${n} responses have been ${ok?"recorded":"collected"}.`,
+    outroDemo:"(Preview mode — nothing was sent.)",
+    outroError:(pid)=>`We couldn't reach the server — please notify the researcher (session ${pid}).`,
+    outroAttrib:"Your contribution supports research on synthetic data for earth observation.<br>— Ümit Mert Çağlar",
+    demoBanner:"Preview mode — placeholder imagery. On your server the four stages load real images from your dataset folders.",
+    legendClasses:["Tree","Shrub","Grass","Crop","Built-up","Barren","Water"],
+    attnPrompt:(n)=>`Attention check — please select option ${n}.`,
+  },
+  tr: {
+    studyTitle:"Sentetik Görüntü Algı Çalışması",
+    s1label:"Dönüşümler",s2label:"Maske Kontrolü",s3label:"Üreticiler",s4label:"Gerçekçilik",
+    s1title:"Aynı sahne mi?",s2title:"Maske doğruluğu",
+    s3title:"En iyi üretilmiş görüntü",s4title:"Ne kadar gerçekçi?",
+    consentEyebrow:"Bilgilendirilmiş Onay",
+    consentH:"Sentetik Uzaktan Algılama Görüntüleri Algı Çalışması",
+    consentLead:"Dört kısa aşamada hava/uydu görüntüleri ve segmentasyon maskeleri görüntüleyerek algısal sorular cevaplayacaksınız. Çalışma yaklaşık 6 dakika sürmektedir.",
+    consentCollectH:"Topladığımız veriler.",
+    consentCollectBody:"Yalnızca yanıtlarınız, soru başına geçen süre, anonim bir oturum kimliği ve kendi beyan ettiğiniz uzaktan algılama deneyimi. İsim, e-posta, IP adresi veya kimlik bilgisi <strong>toplamıyoruz</strong>.",
+    consentB1:"Katılım gönüllüdür; sekmeyi kapatarak istediğiniz zaman çıkabilirsiniz.",
+    consentB2:"Yanıtlar anonimdir ve yalnızca toplu akademik araştırma için kullanılır.",
+    consentB3:"Doğru veya yanlış cevap yoktur; dürüst algınızla ilgileniyoruz.",
+    consentSmall:"Devam ederek 18 yaş üzeri olduğunuzu ve bu koşullar kapsamında katılımı onayladığınızı beyan edersiniz.",
+    consentSession:"Oturum",consentBtn:"Onaylıyorum — devam",
+    demoEyebrow:"Başlamadan önce",
+    demoH:"Uzaktan algılama görüntüleri deneyiminiz",
+    demoHelp:"Bu tek soru, uzmanlığı analizde hesaba katmamıza yardımcı olur. En uygun seçeneği işaretleyin.",
+    exp0title:"Deneyim yok",exp0sub:"Hava veya uydu görüntülerine nadiren bakarım.",
+    exp1title:"Bir miktar aşinalık",exp1sub:"Zaman zaman haritalar veya uzaktan algılama görüntüleriyle çalışıyorum.",
+    exp2title:"Alan uzmanı",exp2sub:"Uzaktan algılama / CBS / yer gözlemi alanında profesyonel olarak çalışıyorum.",
+    btnBack:"Geri",btnContinue:"Devam",btnNext:"İleri",btnBegin:"Aşamayı başlat",
+    stagesInfo:"4 aşama · toplam ~6 dakika",
+    congratsMsg:(n)=>`${n}. Aşama tamamlandı — tebrikler.`,
+    s1ey:"Aşama 1 / 4 · Dönüşümler",s1h:"Aynı sahne mi, farklı mı?",
+    s1body:"İki görüntüyü yan yana göreceksiniz. Sağdaki görüntü döndürülmüş, çevrilmiş, kırpılmış, gürültülü veya bozulmuş olabilir. Bu değişiklikleri görmezden gelin ve yalnızca <strong>her iki görüntünün aynı temel sahneyi gösterip göstermediğini</strong> değerlendirin.",
+    s1pts:["Bozulmayı görmezden gelin; sahnenin içeriğine ve düzenine odaklanın.","Bazı çiftler gerçekten farklı sahnelerdir. Farklıysa <em>Farklı</em> deyin.","Yanıltıcı sorular yoktur; sadece dürüst değerlendirmenizi bekliyoruz."],
+    s2ey:"Aşama 2 / 4 · Maske Kontrolü",s2h:"Maske görüntüyle eşleşiyor mu?",
+    s2body:"Her ekranda bir görüntü ve renk kodlu bir segmentasyon maskesi göreceksiniz. Açıklamayı kullanarak maskenin o görüntüyü <strong>doğru tanımlayıp tanımlamadığını</strong> belirleyin. Bazı maskeler farklı görüntülere aittir.",
+    s2pts:["Açıklama (her zaman sağda) her rengi bir arazi örtüsü sınıfıyla eşleştirir.","Su, yerleşim ve bitki örtüsü gibi ana bölgelerin örtüşüp örtüşmediğini kontrol edin.","Maske açıkça başka bir sahneye aitse <em>Hayır</em> yanıtını verin."],
+    s3ey:"Aşama 3 / 4 · Üreticiler",s3h:"En iyi üretilmiş görüntü hangisi?",
+    s3body:"Bir segmentasyon maskesi ve bu maskeden farklı modeller tarafından üretilmiş üç görüntü göreceksiniz. Maskeye en uygun ve <strong>en gerçekçi görünen tek görüntüyü</strong> seçin.",
+    s3pts:["Üç görüntü her seferinde rastgele sıralanmaktadır.","Hem maskeye sadakati <em>hem de</em> gerçekçiliği göz önünde bulundurun.","O düzenin gerçek bir hava fotoğrafı olabileceğine en çok inandığınızı seçin."],
+    s4ey:"Aşama 4 / 4 · Gerçekçilik",s4h:"Her görüntü ne kadar gerçekçi?",
+    s4body:"Görüntüleri 1–5 ölçeğinde <strong>tamamen sentetikten</strong> <strong>tamamen gerçeğe</strong> kadar değerlendireceksiniz. İlk izleniminizle gidin.",
+    s4pts:["1 = bilgisayar tarafından üretildiğinden eminsiniz.","5 = gerçek bir fotoğraf olduğundan eminsiniz.","Emin olmadığınızda orta değerleri kullanın."],
+    s1q:"Bu iki görüntü <span class=\"em\">aynı sahneyi</span> mi gösteriyor?",
+    imgA:"Görüntü A · orijinal",imgB:"Görüntü B · muhtemelen değiştirilmiş",
+    sameScene:"Aynı sahne",theyMatch:"eşleşiyor",
+    different:"Farklı",notSame:"aynı değil",
+    s2q:"Bu maske görüntüyü <span class=\"em\">doğru segmente</span> ediyor mu?",
+    imgLabel:"Görüntü",maskLabel:"Segmentasyon maskesi",
+    yesMatch:"Evet — eşleşiyor",noWrong:"Hayır — yanlış",
+    s3q:"Hangi üretilmiş görüntü <span class=\"em\">maskeyle en iyi eşleşiyor ve en gerçekçi görünüyor</span>?",
+    realRef:"Gerçek referans",condMask:"Koşullandırma maskesi",
+    option:(n)=>`Seçenek ${n}`,
+    realLabels:["Tamamen<br>sentetik","Muhtemelen<br>sentetik","Emin<br>değilim","Muhtemelen<br>gerçek","Tamamen<br>gerçek"],
+    s4q:"Bu görüntü ne kadar <span class=\"em\">gerçekçi</span>?",
+    likertLow:"← bilgisayar üretimi",likertHigh:"gerçek fotoğraf →",
+    attnBody:"Lütfen dikkat ettiğinizi onaylayın.",
+    legendTitle:"Sınıf açıklaması",legendTitleH:"Sınıflar",
+    submittingEy:"Gönderiliyor…",submittingH:"Yanıtlarınız kaydediliyor",submittingBody:"Bir an.",
+    outroEy:"Tamamlandı",outroH:"Katılımınız için teşekkürler",
+    outroBody:(n,ok)=>`${n} yanıtınız ${ok?"kaydedildi":"toplandı"}.`,
+    outroDemo:"(Önizleme modu — hiçbir şey gönderilmedi.)",
+    outroError:(pid)=>`Sunucuya ulaşılamadı — lütfen araştırmacıya bildirin (oturum ${pid}).`,
+    outroAttrib:"Katkınız, dünya gözlemi için sentetik veri araştırmalarını desteklemektedir.<br>— Ümit Mert Çağlar",
+    demoBanner:"Önizleme modu — yer tutucu görüntüler. Sunucunuzda dört aşama, veri seti klasörlerinizden gerçek görüntüler yükler.",
+    legendClasses:["Ağaç","Çalı","Çayır","Ekin","Yapıt","Çorak","Su"],
+    attnPrompt:(n)=>`Dikkat sorusu — lütfen ${n}. seçeneği işaretleyin.`,
+  }
+};
+
+let LANG = localStorage.getItem('adem_lang') || 'en';
+function t(key, ...args){
+  const val = (i18n[LANG]||i18n.en)[key] ?? i18n.en[key] ?? key;
+  return typeof val === 'function' ? val(...args) : val;
+}
+function setLang(lang){
+  LANG = lang;
+  localStorage.setItem('adem_lang', lang);
+  document.documentElement.lang = lang;
+  updateLangBtns();
+  rerenderCurrent();
+}
+function updateLangBtns(){
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active', b.dataset.lang===LANG));
+}
+function updateDemoBanner(){
+  const b=document.getElementById('demoBanner');
+  if(DEMO && b && b.style.display!=='none') b.textContent=t('demoBanner');
+}
+
+// ============================================================================
 //  Config / class legend
 // ============================================================================
 const LEGEND = [
   ["Tree",[0,100,0]],["Shrub",[255,182,193]],["Grass",[154,205,50]],
   ["Crop",[255,215,0]],["Built-up",[139,69,19]],["Barren",[211,211,211]],["Water",[0,0,255]]
 ];
-const STAGE_META = {
-  stage1:{n:"1",label:"Transforms",title:"Same scene or not?"},
-  stage2:{n:"2",label:"Mask check",title:"Mask correctness"},
-  stage3:{n:"3",label:"Generators",title:"Best generated image"},
-  stage4:{n:"4",label:"Realism",title:"How realistic?"}
-};
 const STAGE_ORDER = ["stage1","stage2","stage3","stage4"];
+const STAGE_KEYS = {
+  stage1:{n:"1",label:"s1label",title:"s1title",ey:"s1ey",h:"s1h",body:"s1body",pts:"s1pts"},
+  stage2:{n:"2",label:"s2label",title:"s2title",ey:"s2ey",h:"s2h",body:"s2body",pts:"s2pts"},
+  stage3:{n:"3",label:"s3label",title:"s3title",ey:"s3ey",h:"s3h",body:"s3body",pts:"s3pts"},
+  stage4:{n:"4",label:"s4label",title:"s4title",ey:"s4ey",h:"s4h",body:"s4body",pts:"s4pts"},
+};
+function getStageMeta(sid){ const k=STAGE_KEYS[sid]; return {n:k.n, label:t(k.label), title:t(k.title)}; }
 
 let STUDY=null, RESULTS=[], EXPERTISE="", PARTICIPANT="";
 let flatTrials=[], pos=0, trialStart=0, current=null, DEMO=false;
+let screenState='consent', outroData=null;
 
 // ============================================================================
 //  Boot — fetch the plan from Flask; fall back to a self-contained mock
 // ============================================================================
 async function boot(){
+  document.documentElement.lang = LANG;
+  updateLangBtns();
+  document.getElementById('brandSubtitle').textContent = t('studyTitle');
   try{
     const res = await fetch("/api/study");
     if(!res.ok) throw new Error("bad status");
@@ -238,11 +403,39 @@ async function boot(){
     STUDY = buildMockStudy();
     const b=document.getElementById("demoBanner");
     b.style.display="block";
-    b.textContent="Preview mode — placeholder imagery. On your server the four stages load real images from your dataset folders.";
+    b.textContent=t('demoBanner');
   }
   PARTICIPANT = STUDY.participant_id;
-  renderStagePills(-1);
   showConsent();
+}
+
+// ============================================================================
+//  Language-aware re-render (called by setLang)
+// ============================================================================
+function rerenderCurrent(){
+  document.getElementById('brandSubtitle').textContent = t('studyTitle');
+  updateDemoBanner();
+  if(screenState==='consent'){
+    renderStagePills(-1); _drawConsent();
+  } else if(screenState==='demographics'){
+    renderStagePills(-1); _drawDemographics();
+  } else if(screenState==='study' && pos < flatTrials.length){
+    const item=flatTrials[pos];
+    if(item.intro){
+      renderStageIntro(item);
+    } else {
+      const savedStart=trialStart, savedResp=current?.response;
+      renderTrial(item);
+      trialStart=savedStart;
+      if(savedResp!==null && savedResp!==undefined){
+        current.response=savedResp;
+        const el=document.querySelector(`[data-v="${savedResp}"]`);
+        if(el){ el.classList.add('sel'); const nb=document.getElementById('nextBtn'); if(nb) nb.disabled=false; }
+      }
+    }
+  } else if(screenState==='outro' && outroData){
+    renderOutroScreen(outroData);
+  }
 }
 
 // ============================================================================
@@ -251,7 +444,7 @@ async function boot(){
 function renderStagePills(activeIdx){
   const el=document.getElementById("stagepills"); el.innerHTML="";
   STAGE_ORDER.forEach((s,i)=>{
-    const m=STAGE_META[s];
+    const m=getStageMeta(s);
     const cls = i<activeIdx?"done":(i===activeIdx?"active":"");
     el.insertAdjacentHTML("beforeend",
       `<div class="stagepill ${cls}"><span class="dot"></span>${m.n}. ${m.label}</div>`);
@@ -262,26 +455,27 @@ function renderStagePills(activeIdx){
 //  Screen: consent
 // ============================================================================
 function showConsent(){
+  screenState='consent';
   renderStagePills(-1);
+  _drawConsent();
+}
+function _drawConsent(){
   document.getElementById("screen").innerHTML = `
   <div class="card">
-    <div class="eyebrow">Informed consent</div>
-    <h1>Perception study on synthetic remote-sensing imagery</h1>
-    <p class="lead">You will view satellite images and segmentation masks and answer short perceptual questions 
-    across four brief stages. The study takes roughly 6 minutes.</p>
+    <div class="eyebrow">${t('consentEyebrow')}</div>
+    <h1>${t('consentH')}</h1>
+    <p class="lead">${t('consentLead')}</p>
     <div class="divider"></div>
-    <p><strong>What we collect.</strong> Only your answers, the time taken per question, an anonymous
-    session ID, and your self-reported remote-sensing experience. We do <strong>not</strong> collect
-    your name, email, IP address, or any identifying information.</p>
+    <p><strong>${t('consentCollectH')}</strong> ${t('consentCollectBody')}</p>
     <ul class="clean">
-      <li>Participation is voluntary; you may stop at any time by closing the tab.</li>
-      <li>Responses are anonymous and used only for aggregate academic research.</li>
-      <li>There are no right or wrong answers — we are interested in your honest perception.</li>
+      <li>${t('consentB1')}</li>
+      <li>${t('consentB2')}</li>
+      <li>${t('consentB3')}</li>
     </ul>
-    <p class="small muted">By continuing you confirm you are 18+ and consent to participation under these terms.</p>
+    <p class="small muted">${t('consentSmall')}</p>
     <div class="actions">
-      <div class="small muted">Session <code>${PARTICIPANT}</code></div>
-      <button class="btn right" onclick="showDemographics()">I consent — continue</button>
+      <div class="small muted">${t('consentSession')} <code>${PARTICIPANT}</code></div>
+      <button class="btn right" onclick="showDemographics()">${t('consentBtn')}</button>
     </div>
   </div>`;
 }
@@ -289,31 +483,35 @@ function showConsent(){
 // ============================================================================
 //  Screen: expertise
 // ============================================================================
-const EXP_OPTS=[
-  ["none","No experience","I rarely look at aerial or satellite imagery."],
-  ["some","Some familiarity","I occasionally work with maps or remote-sensing imagery."],
-  ["expert","Domain expert","I work professionally with remote sensing / GIS / earth observation."]
-];
 function showDemographics(){
+  screenState='demographics';
   renderStagePills(-1);
+  _drawDemographics();
+}
+function _drawDemographics(){
   document.getElementById("screen").innerHTML = `
   <div class="card">
-    <div class="eyebrow">Before we start</div>
-    <h2>Your experience with remote-sensing imagery</h2>
-    <p class="help">This single question helps us account for expertise in the analysis. Pick the closest.</p>
+    <div class="eyebrow">${t('demoEyebrow')}</div>
+    <h2>${t('demoH')}</h2>
+    <p class="help">${t('demoHelp')}</p>
     <div class="opts" id="expopts"></div>
     <div class="actions">
-      <button class="btn ghost" onclick="showConsent()">Back</button>
-      <button class="btn right" id="expnext" disabled onclick="startStudy()">Continue</button>
+      <button class="btn ghost" onclick="showConsent()">${t('btnBack')}</button>
+      <button class="btn right" id="expnext" disabled onclick="startStudy()">${t('btnContinue')}</button>
     </div>
   </div>`;
   const c=document.getElementById("expopts");
-  EXP_OPTS.forEach(([v,t,s])=>{
-    c.insertAdjacentHTML("beforeend",
-      `<div class="opt" data-v="${v}" onclick="pickExp(this)">
-         <div class="marker"></div><div><div class="ttl">${t}</div><div class="sub">${s}</div></div>
-       </div>`);
-  });
+  [["none",t('exp0title'),t('exp0sub')],["some",t('exp1title'),t('exp1sub')],["expert",t('exp2title'),t('exp2sub')]]
+    .forEach(([v,ti,su])=>{
+      c.insertAdjacentHTML("beforeend",
+        `<div class="opt" data-v="${v}" onclick="pickExp(this)">
+           <div class="marker"></div><div><div class="ttl">${ti}</div><div class="sub">${su}</div></div>
+         </div>`);
+    });
+  if(EXPERTISE){
+    const prev=c.querySelector(`[data-v="${EXPERTISE}"]`);
+    if(prev){ prev.classList.add('sel'); document.getElementById('expnext').disabled=false; }
+  }
 }
 function pickExp(el){
   document.querySelectorAll("#expopts .opt").forEach(o=>o.classList.remove("sel"));
@@ -325,13 +523,14 @@ function pickExp(el){
 //  Flatten trials and add per-stage instruction screens
 // ============================================================================
 function startStudy(){
+  screenState='study';
   flatTrials=[];
   STAGE_ORDER.forEach((sid,si)=>{
     const stage = STUDY.stages.find(s=>s.id===sid);
     if(!stage) return;
     flatTrials.push({intro:sid, stageIdx:si});
-    stage.trials.forEach((t,ti)=>flatTrials.push(
-      {trial:t, stage:sid, stageIdx:si, idxInStage:ti, totalInStage:stage.trials.length}));
+    stage.trials.forEach((tr,ti)=>flatTrials.push(
+      {trial:tr, stage:sid, stageIdx:si, idxInStage:ti, totalInStage:stage.trials.length}));
   });
   pos=0; renderNext();
 }
@@ -346,40 +545,22 @@ function renderNext(){
 // ============================================================================
 //  Stage intro screens
 // ============================================================================
-const STAGE_INTRO={
-  stage1:{eyebrow:"Stage 1 of 4 · Transforms",
-    h:"Same scene, or different?",
-    body:"You'll see two images side by side. The right image may be altered — rotated, flipped, cropped, noisy, or warped. Ignore those alterations and judge only whether <strong>both images show the same underlying scene</strong>.",
-    pts:["Look past the distortion — focus on the content / layout of the scene.","Some pairs really are different scenes. Say <em>Different</em> when they are.","There are no trick gradients — just your honest read."]},
-  stage2:{eyebrow:"Stage 2 of 4 · Mask check",
-    h:"Does the mask match the image?",
-    body:"Each screen shows an image and a colour-coded segmentation mask. Using the legend, decide whether the mask <strong>correctly describes that image</strong>. Some masks belong to a different image.",
-    pts:["The legend (always on the right) maps each colour to a land-cover class.","Check that major regions line up — water, built-up, vegetation.","Answer <em>No</em> if the mask clearly belongs to another scene."]},
-  stage3:{eyebrow:"Stage 3 of 4 · Generators",
-    h:"Which generated image is best?",
-    body:"You'll see one segmentation mask and three images generated from it by different models. Pick the <strong>single image that best fits the mask and looks most realistic</strong>.",
-    pts:["The three are shown in random order each time.","Weigh both faithfulness to the mask <em>and</em> realism.","Choose the one you'd most believe is a real aerial photo of that layout."]},
-  stage4:{eyebrow:"Stage 4 of 4 · Realism",
-    h:"How realistic is each image?",
-    body:"You'll rate single images on a 1–5 scale, from <strong>completely synthetic</strong> to <strong>completely real</strong>. Go with your first impression.",
-    pts:["1 = you're confident it's computer-generated.","5 = you're confident it's a genuine photograph.","Use the middle values when you're unsure."]}
-};
 function renderStageIntro(item){
   renderStagePills(item.stageIdx);
-  const s=STAGE_INTRO[item.intro];
+  const k=STAGE_KEYS[item.intro];
   const congrats = item.stageIdx > 0
-    ? `<div style="background:#edf5f0;border:1px solid #b8d5c4;border-radius:var(--r-sm);padding:11px 15px;margin-bottom:22px;color:var(--good);font-size:14px;font-weight:600;">Stage ${item.stageIdx} complete — well done.</div>`
+    ? `<div style="background:#edf5f0;border:1px solid #b8d5c4;border-radius:var(--r-sm);padding:11px 15px;margin-bottom:22px;color:var(--good);font-size:14px;font-weight:600;">${t('congratsMsg',item.stageIdx)}</div>`
     : "";
   document.getElementById("screen").innerHTML=`
   <div class="card">
     ${congrats}
-    <div class="eyebrow">${s.eyebrow}</div>
-    <h1>${s.h}</h1>
-    <p class="lead">${s.body}</p>
-    <ul class="clean">${s.pts.map(p=>`<li>${p}</li>`).join("")}</ul>
+    <div class="eyebrow">${t(k.ey)}</div>
+    <h1>${t(k.h)}</h1>
+    <p class="lead">${t(k.body)}</p>
+    <ul class="clean">${t(k.pts).map(p=>`<li>${p}</li>`).join("")}</ul>
     <div class="actions">
-      <span class="small muted">4 stages &middot; ~6 minutes total</span>
-      <button class="btn right" onclick="advance()">Begin stage</button>
+      <span class="small muted">${t('stagesInfo')}</span>
+      <button class="btn right" onclick="advance()">${t('btnBegin')}</button>
     </div>
   </div>`;
 }
@@ -388,12 +569,13 @@ function renderStageIntro(item){
 //  Trial rendering
 // ============================================================================
 function legendHTML(horiz){
-  const rows = LEGEND.map(([n,c])=>`<div class="row"><span class="sw" style="background:rgb(${c.join(',')})"></span>${n}</div>`).join("");
-  if(horiz) return `<div class="legend horiz"><span class="hl">Classes</span>${rows}</div>`;
-  return `<div class="legend"><h4>Class legend</h4>${rows}</div>`;
+  const names=t('legendClasses');
+  const rows = LEGEND.map(([,c],i)=>`<div class="row"><span class="sw" style="background:rgb(${c.join(',')})"></span>${names[i]}</div>`).join("");
+  if(horiz) return `<div class="legend horiz"><span class="hl">${t('legendTitleH')}</span>${rows}</div>`;
+  return `<div class="legend"><h4>${t('legendTitle')}</h4>${rows}</div>`;
 }
 function stageCounter(item){
-  const m=STAGE_META[item.stage];
+  const m=getStageMeta(item.stage);
   return `<span class="count">${m.n}. ${m.label} · ${item.idxInStage+1} / ${item.totalInStage}</span>`;
 }
 
@@ -401,95 +583,94 @@ function renderTrial(item){
   renderStagePills(item.stageIdx);
   current={item, response:null};
   trialStart=performance.now();
-  const t=item.trial;
+  const tr=item.trial;
   let body="";
-  if(t.type==="attention")      body=tplAttention(t);
-  else if(t.type==="s1_samediff")body=tplSameDiff(t);
-  else if(t.type==="s2_maskcheck")body=tplMaskCheck(t);
-  else if(t.type==="s3_bestpick")body=tplBestPick(t);
-  else if(t.type==="s4_realism") body=tplRealism(t);
+  if(tr.type==="attention")       body=tplAttention(tr);
+  else if(tr.type==="s1_samediff") body=tplSameDiff(tr);
+  else if(tr.type==="s2_maskcheck")body=tplMaskCheck(tr);
+  else if(tr.type==="s3_bestpick") body=tplBestPick(tr);
+  else if(tr.type==="s4_realism")  body=tplRealism(tr);
 
   const progress=(item.idxInStage)/item.totalInStage*100;
   document.getElementById("screen").innerHTML=`
   <div class="card">
-    <div class="trialhead"><div class="eyebrow" style="margin:0">${STAGE_META[item.stage].title}</div>${stageCounter(item)}</div>
+    <div class="trialhead"><div class="eyebrow" style="margin:0">${getStageMeta(item.stage).title}</div>${stageCounter(item)}</div>
     ${body}
     <div class="actions">
-      <button class="btn right" id="nextBtn" disabled onclick="commit()">Next</button>
+      <button class="btn right" id="nextBtn" disabled onclick="commit()">${t('btnNext')}</button>
     </div>
     <div class="barfill"><i style="width:${progress}%"></i></div>
   </div>`;
-  // Mark already-cached images so the spinner clears immediately.
   requestAnimationFrame(()=>document.querySelectorAll('.frame img').forEach(i=>{
     if(i.complete&&i.naturalWidth>0) i.closest('.frame')?.classList.add('img-loaded');
   }));
 }
 
 // ---- templates ----
-function tplSameDiff(t){
+function tplSameDiff(tr){
   return `
-  <p class="qtext">Do these two images show the <span class="em">same scene</span>?</p>
+  <p class="qtext">${t('s1q')}</p>
   <div class="pair">
-    <div class="imgcell"><span class="cap">Image A · original</span><div class="frame"><img src="${t.left}"></div></div>
-    <div class="imgcell"><span class="cap">Image B · possibly altered</span><div class="frame"><img src="${t.right}"></div></div>
+    <div class="imgcell"><span class="cap">${t('imgA')}</span><div class="frame"><img src="${tr.left}"></div></div>
+    <div class="imgcell"><span class="cap">${t('imgB')}</span><div class="frame"><img src="${tr.right}"></div></div>
   </div>
   <div class="binary" style="margin-top:22px">
-    <div class="chip" data-v="same" onclick="pick(this,'same')">Same scene<span class="k">they match</span></div>
-    <div class="chip" data-v="different" onclick="pick(this,'different')">Different<span class="k">not the same</span></div>
+    <div class="chip" data-v="same" onclick="pick(this,'same')">${t('sameScene')}<span class="k">${t('theyMatch')}</span></div>
+    <div class="chip" data-v="different" onclick="pick(this,'different')">${t('different')}<span class="k">${t('notSame')}</span></div>
   </div>`;
 }
-function tplMaskCheck(t){
+function tplMaskCheck(tr){
   return `
-  <p class="qtext">Does this mask <span class="em">correctly segment</span> the image?</p>
+  <p class="qtext">${t('s2q')}</p>
   <div class="withlegend">
-    <div class="imgcell"><span class="cap">Image</span><div class="frame"><img src="${t.image}"></div></div>
-    <div class="imgcell"><span class="cap">Segmentation mask</span><div class="frame"><img src="${t.mask}"></div></div>
+    <div class="imgcell"><span class="cap">${t('imgLabel')}</span><div class="frame"><img src="${tr.image}"></div></div>
+    <div class="imgcell"><span class="cap">${t('maskLabel')}</span><div class="frame"><img src="${tr.mask}"></div></div>
     ${legendHTML()}
   </div>
   <div class="binary" style="margin-top:22px">
-    <div class="chip" data-v="yes" onclick="pick(this,'yes')">Yes — it matches</div>
-    <div class="chip" data-v="no" onclick="pick(this,'no')">No — it's wrong</div>
+    <div class="chip" data-v="yes" onclick="pick(this,'yes')">${t('yesMatch')}</div>
+    <div class="chip" data-v="no" onclick="pick(this,'no')">${t('noWrong')}</div>
   </div>`;
 }
-function tplBestPick(t){
-  const ref = t.reference
-    ? `<div class="imgcell"><span class="cap">Real reference</span><div class="frame"><img src="${t.reference}"></div></div>`
+function tplBestPick(tr){
+  const ref = tr.reference
+    ? `<div class="imgcell"><span class="cap">${t('realRef')}</span><div class="frame"><img src="${tr.reference}"></div></div>`
     : "";
   return `
-  <p class="qtext">Which generated image <span class="em">best matches the mask and looks most realistic</span>?</p>
+  <p class="qtext">${t('s3q')}</p>
   <div class="maskrow">
     ${ref}
-    <div class="imgcell"><span class="cap">Conditioning mask</span><div class="frame"><img src="${t.mask}"></div></div>
+    <div class="imgcell"><span class="cap">${t('condMask')}</span><div class="frame"><img src="${tr.mask}"></div></div>
     ${legendHTML()}
   </div>
   <div class="threeup">
-    ${t.options.map((o,i)=>`
+    ${tr.options.map((o,i)=>`
       <div class="gencard" data-v="${o.key}" onclick="pick(this,'${o.key}')">
         <div class="frame"><img src="${o.image}"></div>
-        <div class="pick"><span class="mk"></span>Option ${i+1}</div>
+        <div class="pick"><span class="mk"></span>${t('option',i+1)}</div>
       </div>`).join("")}
   </div>`;
 }
-const REAL_LABELS=["Completely<br>synthetic","Probably<br>synthetic","Unsure","Probably<br>real","Completely<br>real"];
-function tplRealism(t){
+function tplRealism(tr){
+  const rl=t('realLabels');
   return `
-  <p class="qtext">How <span class="em">realistic</span> is this image?</p>
-  <div class="frame s4frame"><img src="${t.image}"></div>
+  <p class="qtext">${t('s4q')}</p>
+  <div class="frame s4frame"><img src="${tr.image}"></div>
   <div class="likert">
     ${[1,2,3,4,5].map((n,i)=>`
       <div class="step" data-v="${n}" onclick="pick(this,${n})">
-        <span class="num">${n}</span><span class="lab">${REAL_LABELS[i]}</span>
+        <span class="num">${n}</span><span class="lab">${rl[i]}</span>
       </div>`).join("")}
   </div>
-  <div class="likert-ends"><span>← computer-generated</span><span>genuine photograph →</span></div>`;
+  <div class="likert-ends"><span>${t('likertLow')}</span><span>${t('likertHigh')}</span></div>`;
 }
-function tplAttention(t){
-  const opts=[1,2,3,4,5].slice(0,5);
+function tplAttention(tr){
+  const prompt = tr.prompt_target!=null ? t('attnPrompt',tr.prompt_target) : tr.prompt;
   return `
-  <div class="attention">${t.prompt}</div>
-  <p class="qtext">Please confirm you're paying attention.</p>
+  <div class="attention">${prompt}</div>
+  <p class="qtext">${t('attnBody')}</p>
   <div class="likert">
-    ${opts.map(n=>`<div class="step" data-v="${n}" onclick="pick(this,${n})"><span class="num">${n}</span></div>`).join("")}
+    ${[1,2,3,4,5].map(n=>`<div class="step" data-v="${n}" onclick="pick(this,${n})"><span class="num">${n}</span></div>`).join("")}
   </div>`;
 }
 
@@ -502,9 +683,9 @@ function pick(el,val){
   document.getElementById("nextBtn").disabled=false;
 }
 function commit(){
-  const it=current.item, t=it.trial;
+  const it=current.item, tr=it.trial;
   RESULTS.push({
-    trial_id:t.trial_id, type:t.type, stage:it.stage,
+    trial_id:tr.trial_id, type:tr.type, stage:it.stage,
     response:current.response,
     reaction_time_ms:Math.round(performance.now()-trialStart),
     client_timestamp:new Date().toISOString()
@@ -517,28 +698,34 @@ function advance(){ pos++; renderNext(); window.scrollTo(0,0); }
 //  Outro + submit
 // ============================================================================
 async function showOutro(){
+  screenState='outro';
   renderStagePills(4);
   document.getElementById("screen").innerHTML=`
   <div class="card center">
-    <div class="eyebrow">Submitting…</div>
-    <h1>Saving your responses</h1>
-    <p class="lead" style="margin:0 auto">One moment.</p>
+    <div class="eyebrow">${t('submittingEy')}</div>
+    <h1>${t('submittingH')}</h1>
+    <p class="lead" style="margin:0 auto">${t('submittingBody')}</p>
   </div>`;
-  let ok=true, info="";
+  let ok=true;
   try{
     if(DEMO) throw new Error("demo");
     const r=await fetch("/api/submit",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({participant_id:PARTICIPANT, expertise:EXPERTISE, responses:RESULTS})});
-    const j=await r.json(); ok=(j.status==="success"); info=j.sink?`(${j.sink})`:"";
+    const j=await r.json(); ok=(j.status==="success");
   }catch(e){ ok=DEMO?true:false; }
+  outroData={ok};
+  renderOutroScreen(outroData);
+}
+function renderOutroScreen({ok}){
+  renderStagePills(4);
   document.getElementById("screen").innerHTML=`
   <div class="card center">
-    <div class="eyebrow" style="color:var(--good)">Complete</div>
-    <h1>Thank you for taking part</h1>
-    <p class="lead" style="margin:0 auto 8px">Your ${RESULTS.length} responses have been ${ok?"recorded":"collected"}.
-    ${DEMO?"<br><span class='small muted'>(Preview mode — nothing was sent.)</span>":""}</p>
-    ${!ok&&!DEMO?`<p class="small" style="color:var(--warn)">We couldn't reach the server — please notify the researcher (session ${PARTICIPANT}).</p>`:""}
-    <p class="small muted">Your contribution supports research on synthetic data for earth observation.<br>— Ümit Mert Çağlar</p>
+    <div class="eyebrow" style="color:var(--good)">${t('outroEy')}</div>
+    <h1>${t('outroH')}</h1>
+    <p class="lead" style="margin:0 auto 8px">${t('outroBody',RESULTS.length,ok)}
+    ${DEMO?`<br><span class='small muted'>${t('outroDemo')}</span>`:""}</p>
+    ${!ok&&!DEMO?`<p class="small" style="color:var(--warn)">${t('outroError',PARTICIPANT)}</p>`:""}
+    <p class="small muted">${t('outroAttrib')}</p>
   </div>`;
 }
 
@@ -563,8 +750,8 @@ function ph(label,seed,kind){
 function buildMockStudy(){
   const T=["baseline","noise","perspective","rotation","flip","resizedcrop","combined"];
   const s1=[]; let i=0;
-  for(let n=0;n<2;n++) T.forEach(t=>{s1.push({trial_id:`s1_${i}`,type:"s1_samediff",
-    left:ph(`scene ${n}`,n+1,'img'),right:ph(`scene ${n} · ${t}`,(n+1)*9+T.indexOf(t),'img')});i++;});
+  for(let n=0;n<2;n++) T.forEach(tr=>{s1.push({trial_id:`s1_${i}`,type:"s1_samediff",
+    left:ph(`scene ${n}`,n+1,'img'),right:ph(`scene ${n} · ${tr}`,(n+1)*9+T.indexOf(tr),'img')});i++;});
   s1.push({trial_id:`s1_${i++}`,type:"s1_samediff",left:ph("scene 0",1,'img'),right:ph("scene 7 · rotation",77,'img')});
   const s2=[]; for(let n=0;n<4;n++){const wrong=n%2===0;
     s2.push({trial_id:`s2_${n}`,type:"s2_maskcheck",image:ph(`image ${n}`,n+20,'img'),
@@ -575,10 +762,10 @@ function buildMockStudy(){
       options:ord.map((g,j)=>({key:g,image:ph(g,(n+1)*7+j,'gen')}))});}
   const folders=[["ARAS400k-cnet",1],["ARAS-CSD-1E7",0],["ARAS-CSD-2",0],["ARAS-C-UNetGAN",0],
     ["ARAS400k_real",1],["ARAS400k_synth",0],["diverse",0],["BELDECN",1],["BELDEK",1]];
-  const s4=[]; let j=0; folders.forEach(([f,real])=>{for(let k=0;k<1;k++){
+  const s4=[]; let j=0; folders.forEach(([f,real])=>{for(let kk=0;kk<1;kk++){
     s4.push({trial_id:`s4_${j}`,type:"s4_realism",image:ph(`${f}`,j+80,real?'real':'gen')});j++;}});
-  s4.splice(2,0,{trial_id:"attn_s4",type:"attention",render_as:"s4_realism",target:3,prompt:"Attention check — please select option 3."});
-  return {participant_id:"demo_"+Math.random().toString(36).slice(2,8),legend:LEGEND,
+  s4.splice(2,0,{trial_id:"attn_s4",type:"attention",render_as:"s4_realism",target:3,prompt_target:3});
+  return {participant_id:"demo_"+Math.random().toString(36).slice(2,8),
     stages:[{id:"stage1",trials:s1},{id:"stage2",trials:s2},{id:"stage3",trials:s3},{id:"stage4",trials:s4}]};
 }
 
