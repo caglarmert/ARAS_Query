@@ -91,7 +91,7 @@ COUNTS = {
     "stage2_m":          int(_p("S2_M", "10")),       # image-mask pairs (~half made incorrect)
     "stage2_wrong_frac": float(_p("S2_WRONG", "0.5")),# fraction with swapped (wrong) masks
     "stage3_k":          int(_p("S3_K", "10")),       # mask + 3-generator comparisons
-    "stage4_per_folder": int(_p("S4_PER", "1")),      # images sampled per source folder
+    "stage4_per_folder": int(_p("S4_PER", "2")),      # images sampled per source folder
     "attention_checks":  int(_p("ATTN", "1")),        # instructed-response checks per applicable stage
 }
 
