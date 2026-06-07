@@ -1,7 +1,7 @@
-Flask>=3.0
-gspread>=6.0
-Pillow>=10.0
-numpy>=1.26
-albumentations>=2.0
-opencv-python-headless>=4.9
-gunicorn>=21.0
+Flask
+gspread
+Pillow
+numpy
+albumentations
+opencv-python-headless
+gunicorn
