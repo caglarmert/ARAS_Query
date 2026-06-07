@@ -38,12 +38,12 @@ samplednoref/ARAS400k_synth, diverse, BELDECN, BELDEK   # Stage 4
 ## Config (environment variables)
 | Var | Default | Meaning |
 |---|---|---|
-| `S1_N` | 5 | Stage-1 base images (×7 transforms each) |
-| `S1_CTRL` | 4 | Stage-1 different-image control pairs |
+| `S1_N` | 2 | Stage-1 base images (×7 transforms each) |
+| `S1_CTRL` | 6 | Stage-1 different-image control pairs |
 | `S2_M` | 10 | Stage-2 image–mask pairs |
 | `S2_WRONG` | 0.5 | Fraction of Stage-2 pairs given a swapped (wrong) mask |
 | `S3_K` | 10 | Stage-3 mask comparisons |
-| `S4_PER` | 2 | Stage-4 images sampled per source folder |
+| `S4_PER` | 1 | Stage-4 images sampled per source folder |
 | `ATTN` | 1 | Attention checks per applicable stage |
 | `S1_SRC`, `S2_*`, `S3_*`, `S4_*` | see `app.py` | Folder paths |
 | `DATA_ROOT` | `.` | Root all dataset paths resolve under |

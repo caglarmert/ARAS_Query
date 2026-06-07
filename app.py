@@ -368,6 +368,23 @@ def _insert_attention(trials, render_as, rng):
 
 
 # ----------------------------------------------------------------------------------
+# PLAN CLEANUP
+# ----------------------------------------------------------------------------------
+PLAN_TTL = 7200  # seconds — plans older than this are released on the next study request
+
+
+def _cleanup_plans():
+    """Release ground-truth memory for abandoned or expired sessions."""
+    cutoff = datetime.now(timezone.utc).timestamp() - PLAN_TTL
+    stale = [pid for pid, store in list(PLANS.items())
+             if store.get("_created", 0) < cutoff]
+    for pid in stale:
+        PLANS.pop(pid, None)
+    if stale:
+        print(f"[plans] released {len(stale)} stale plan(s)")
+
+
+# ----------------------------------------------------------------------------------
 # ROUTES
 # ----------------------------------------------------------------------------------
 @app.route("/")
@@ -377,6 +394,7 @@ def index():
 
 @app.route("/api/study")
 def api_study():
+    _cleanup_plans()
     pid = request.args.get("pid") or uuid.uuid4().hex[:12]
     rng = random.Random(_seed(pid, datetime.now().timestamp()))
     stages = [
@@ -390,8 +408,9 @@ def api_study():
     for st in stages:
         for tr in st["trials"]:
             gt_store[tr["trial_id"]] = {"stage": st["id"], **tr.pop("gt")}
+    gt_store["_created"] = datetime.now(timezone.utc).timestamp()
     PLANS[pid] = gt_store
-    return jsonify({"participant_id": pid, "legend": LEGEND, "stages": stages})
+    return jsonify({"participant_id": pid, "stages": stages})
 
 
 def _safe_dir(rel):
