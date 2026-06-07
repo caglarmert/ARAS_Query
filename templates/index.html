@@ -198,6 +198,83 @@
   .lang-btn:hover{border-color:var(--border-strong);color:var(--ink);}
   .lang-btn.active{background:var(--accent-soft);border-color:#d7e0ea;color:var(--accent-ink);}
   @media(max-width:520px){.lang-btn{font-size:11px;padding:4px 7px;}}
+
+  /* ============================================================
+     MOBILE PHONE  (≤ 600 px)
+     Purely additive — nothing below changes desktop behaviour.
+     ============================================================ */
+  @media(max-width:600px){
+    /* Natural page scroll; avoids mobile-browser chrome-height glitches */
+    html,body{height:auto;min-height:100vh;overflow-y:auto;}
+    body{overflow:visible;}
+    main.wrap{overflow-y:visible;}
+    #screen{justify-content:flex-start;padding:10px 12px;}
+
+    /* Header — tighter on narrow screens */
+    .bar-inner{padding:0 10px;gap:5px;}
+    .stagepill{padding:3px 5px;font-size:10px;}
+    .stagepill .dot{width:6px;height:6px;}
+
+    /* Card & type */
+    .card{padding:18px 16px;}
+    h1{font-size:21px;}
+    h2{font-size:18px;}
+    .qtext{font-size:17px;margin-bottom:12px;}
+    .lead{font-size:14.5px;}
+    .actions{margin-top:16px;}
+    .btn{padding:11px 18px;font-size:14px;}
+
+    /* ---- IMAGE FRAMES — the main fix: much shorter on phones ---- */
+    /* Stage 1: two stacked images — keep them short so Next stays visible */
+    .pair .frame{height:min(30vh,170px);}
+    /* Stage 2: two images side-by-side + legend */
+    .withlegend .frame{height:min(28vh,160px);}
+    /* Stage 3: reference/mask row above the three-up */
+    .maskrow .frame{height:min(25vh,145px);}
+    .maskstrip .frame{height:min(20vh,120px);}
+    /* Stage 4: single large image */
+    .s4frame{height:min(40vh,240px);width:min(100%,240px);}
+
+    /* Stage 3 three-up: keep all 3 generators in one row (small but comparable).
+       This overrides the @media(max-width:680px){grid-template-columns:1fr} rule
+       that would otherwise make them one giant square each. */
+    .threeup{grid-template-columns:repeat(3,1fr);gap:8px;}
+    .gencard .pick{padding:7px 5px;font-size:11px;gap:4px;}
+    .gencard .pick .mk{width:13px;height:13px;}
+
+    /* Binary answer chips */
+    .binary .chip{padding:13px 8px;font-size:14px;}
+
+    /* Likert scale — compact */
+    .likert{gap:5px;}
+    .likert .step{padding:10px 3px;}
+    .likert .step .num{font-size:20px;}
+    .likert .step .lab{font-size:10px;}
+    .likert-ends{font-size:11px;margin-top:6px;}
+
+    /* Class legend */
+    .legend{padding:10px 12px;}
+    .legend .row{font-size:12px;}
+    .legend .sw{width:13px;height:13px;}
+
+    /* Consent / expertise screens */
+    .opt{padding:12px 14px;}
+    .opt .sub{font-size:13px;}
+    ul.clean li{font-size:14px;}
+    .divider{margin:18px 0;}
+  }
+
+  /* Very small phones (≤ 400 px) — squeeze a little more */
+  @media(max-width:400px){
+    .card{padding:14px 12px;}
+    #screen{padding:8px 8px;}
+    h1{font-size:18px;}
+    .pair .frame{height:min(26vh,145px);}
+    .s4frame{height:min(36vh,200px);width:min(100%,200px);}
+    /* Hide text labels of inactive stage pills to save header space */
+    .stagepill:not(.active):not(.done){font-size:0;padding:5px;}
+    .stagepill:not(.active):not(.done) .dot{margin:0;}
+  }
 </style>
 </head>
 <body>
